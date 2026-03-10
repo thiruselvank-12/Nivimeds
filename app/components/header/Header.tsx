@@ -47,7 +47,7 @@ export default function Header({ onLoginClick, onLocationClick, onNotificationCl
             <div className="flex items-center font-black tracking-tight text-3xl leading-none">
               <img src="/assets/logo.png" alt="NiviMeds Logo" className="h-10 w-auto" />
             </div>
-            <span className="text-[10px] text-gray-500 font-medium tracking-widest uppercase mt-0.5">Simply Trust</span>
+            <span className="text-[10px] text-gray-500 font-medium tracking-widest uppercase mt-0.5"></span>
           </Link>
           {/* Location Selector */}
           <button
