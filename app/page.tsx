@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Menu, X, MapPin, ChevronDown, Search, Phone, Bell, ShoppingCart, User,
+  Menu, X, MapPin, ChevronDown, Phone, Bell, ShoppingCart, User,
   FileText, Stethoscope, ShieldCheck, ChevronRight, ArrowRight, Pill,
   HeartPulse, Activity, Baby, Leaf, ShieldPlus, Star, FlaskConical, Clock, Truck
 } from 'lucide-react';
+import SearchOmnibar from './components/SearchOmnibar';
 
 // Fallback Link component to ensure compilation in this preview environment
 const Link = ({ href, children, className, onClick }: any) => (
@@ -76,18 +77,9 @@ export default function NivimedsHome() {
             </div>
           </div>
 
-          {/* Center Search Bar (Hidden on small mobile, flex on md+) */}
+          {/* Center Search Bar — Advanced Omnibar (Hidden on mobile) */}
           <div className="hidden md:flex flex-1 max-w-2xl mx-6">
-            <div className="relative w-full">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Search className="w-[18px] h-[18px] text-gray-400" />
-              </div>
-              <input 
-                type="text" 
-                className="block w-full pl-11 pr-4 py-2.5 border-none rounded-full bg-gray-100 text-sm focus:bg-white focus:ring-2 focus:ring-[#1E6FD9]/20 shadow-inner transition-all placeholder-gray-500 outline-none"
-                placeholder="Search for medicines, lab tests, healthcare products..."
-              />
-            </div>
+            <SearchOmnibar />
           </div>
 
           {/* Right Actions */}
@@ -110,18 +102,9 @@ export default function NivimedsHome() {
           </div>
         </div>
 
-        {/* Mobile Search Bar (Visible only on mobile) */}
+        {/* Mobile Search Bar — Advanced Omnibar */}
         <div className="md:hidden px-4 py-3 bg-white border-b border-gray-100">
-          <div className="relative w-full">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Search className="w-[18px] h-[18px] text-gray-400" />
-            </div>
-            <input 
-              type="text" 
-              className="block w-full pl-11 pr-4 py-2 border border-gray-200 rounded-full bg-gray-50 text-sm focus:outline-none focus:border-[#1E6FD9]"
-              placeholder="Search medicines..."
-            />
-          </div>
+          <SearchOmnibar isMobile />
         </div>
 
         {/* Layer 2: Primary Navigation Bar (Green) */}

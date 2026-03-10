@@ -1,0 +1,343 @@
+// This is your Prisma schema file.
+// Learn more about it at: https://pris.ly/d/prisma-schema
+//
+// SETUP INSTRUCTIONS:
+// 1. Install Prisma: npm install prisma @prisma/client
+// 2. Set DATABASE_URL in .env.local:
+//    DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/nivimeds"
+// 3. Run: npx prisma migrate dev --name init
+// 4. Uncomment prisma client in lib/db.ts
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== Authentication ====================
+
+model User {
+  id              String         @id @default(cuid())
+  phone           String         @unique
+  email           String?        @unique
+  name            String
+  avatar          String?
+  paybackPoints   Int            @default(0)
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  membership      Membership?
+  addresses       Address[]
+  orders          Order[]
+  cart            Cart?
+  reviews         Review[]
+  prescriptions   Prescription[]
+  appointments    Appointment[]
+  wishlist        WishlistItem[]
+
+  @@map("users")
+}
+
+model Membership {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  tier        String   @default("basic") // basic, plus
+  startsAt    DateTime @default(now())
+  expiresAt   DateTime
+  autoRenew   Boolean  @default(false)
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("memberships")
+}
+
+// ==================== Products & Catalog ====================
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  icon        String?
+  parentId    String?
+  isActive    Boolean   @default(true)
+
+  parent      Category?  @relation("CategorySelf", fields: [parentId], references: [id])
+  children    Category[] @relation("CategorySelf")
+  products    Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id                  String    @id @default(cuid())
+  name                String
+  slug                String    @unique
+  brand               String
+  categoryId          String
+  description         String    @db.Text
+  ingredients         String[]
+  dosage              String?
+  unit                String?
+  price               Decimal   @db.Decimal(10, 2)
+  mrp                 Decimal   @db.Decimal(10, 2)
+  images              String[]
+  requiresPrescription Boolean   @default(false)
+  isOTC               Boolean   @default(true)
+  isNivimedsExclusive Boolean   @default(false)
+  inStock             Boolean   @default(true)
+  stockQuantity       Int       @default(0)
+  rating              Float     @default(0)
+  reviewCount         Int       @default(0)
+  tags                String[]
+  isActive            Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  category        Category        @relation(fields: [categoryId], references: [id])
+  orderItems      OrderItem[]
+  reviews         Review[]
+  cartItems       CartItem[]
+  wishlistItems   WishlistItem[]
+
+  @@map("products")
+}
+
+// ==================== Cart ====================
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id])
+  items     CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  productId String
+  quantity  Int     @default(1)
+
+  cart      Cart    @relation(fields: [cartId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@map("cart_items")
+}
+
+// ==================== Orders ====================
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  userId          String
+  addressId       String
+  subtotal        Decimal     @db.Decimal(10, 2)
+  discount        Decimal     @default(0) @db.Decimal(10, 2)
+  deliveryFee     Decimal     @default(0) @db.Decimal(10, 2)
+  total           Decimal     @db.Decimal(10, 2)
+  status          String      @default("placed") // placed, confirmed, packed, out_for_delivery, delivered, cancelled
+  paymentMethod   String
+  paymentStatus   String      @default("pending") // pending, paid, failed, refunded
+  razorpayOrderId String?
+  couponCode      String?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id])
+  address     Address     @relation(fields: [addressId], references: [id])
+  items       OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+  mrp       Decimal @db.Decimal(10, 2)
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+// ==================== Address ====================
+
+model Address {
+  id       String  @id @default(cuid())
+  userId   String
+  label    String  @default("Home")
+  name     String
+  phone    String
+  line1    String
+  line2    String?
+  city     String
+  state    String
+  pincode  String
+  isDefault Boolean @default(false)
+
+  user   User    @relation(fields: [userId], references: [id])
+  orders Order[]
+
+  @@map("addresses")
+}
+
+// ==================== Reviews ====================
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  rating    Int      // 1-5
+  title     String?
+  body      String?  @db.Text
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+  @@map("reviews")
+}
+
+// ==================== Prescriptions ====================
+
+model Prescription {
+  id          String   @id @default(cuid())
+  userId      String
+  fileUrl     String
+  fileType    String   // image, pdf
+  notes       String?
+  status      String   @default("pending") // pending, reviewed, approved, rejected
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("prescriptions")
+}
+
+// ==================== Doctors ====================
+
+model Doctor {
+  id              String   @id @default(cuid())
+  name            String
+  specialization  String
+  experience      Int
+  education       String
+  hospital        String
+  languages       String[]
+  fee             Decimal  @db.Decimal(10, 2)
+  rating          Float    @default(0)
+  reviewCount     Int      @default(0)
+  imageUrl        String?
+  isAvailable     Boolean  @default(true)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  appointments Appointment[]
+
+  @@map("doctors")
+}
+
+model Appointment {
+  id        String   @id @default(cuid())
+  userId    String
+  doctorId  String
+  type      String   @default("video") // video, chat
+  status    String   @default("pending") // pending, confirmed, completed, cancelled
+  scheduledAt DateTime
+  notes     String?
+  fee       Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  doctor Doctor @relation(fields: [doctorId], references: [id])
+
+  @@map("appointments")
+}
+
+// ==================== Lab Tests ====================
+
+model LabTest {
+  id           String @id @default(cuid())
+  name         String
+  description  String? @db.Text
+  price        Decimal @db.Decimal(10, 2)
+  mrp          Decimal @db.Decimal(10, 2)
+  turnaround   String
+  sampleType   String
+  isPopular    Boolean @default(false)
+  isPackage    Boolean @default(false)
+  testCount    Int     @default(1)
+  isActive     Boolean @default(true)
+
+  @@map("lab_tests")
+}
+
+// ==================== Blog ====================
+
+model BlogPost {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  excerpt     String   @db.Text
+  body        String   @db.Text
+  category    String
+  author      String
+  imageUrl    String?
+  tags        String[]
+  readTime    String?
+  published   Boolean  @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("blog_posts")
+}
+
+// ==================== Coupons ====================
+
+model Coupon {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  type        String   @default("percent") // percent, flat
+  discount    Decimal  @db.Decimal(10, 2)
+  minOrder    Decimal  @default(0) @db.Decimal(10, 2)
+  maxUses     Int?
+  usedCount   Int      @default(0)
+  isActive    Boolean  @default(true)
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  @@map("coupons")
+}
+
+// ==================== Wishlist ====================
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+  @@map("wishlist_items")
+}
