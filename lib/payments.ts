@@ -1,45 +1,53 @@
-// Payments stub for Razorpay integration
-// Requires RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env.local
+import Razorpay from 'razorpay';
+import crypto from 'crypto';
 
-export interface RazorpayOrder {
+if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+  console.warn('[Razorpay] Credentials not set — payment features will use test mode');
+}
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || 'placeholder',
+});
+
+export interface RazorpayOrderResult {
   id: string;
   amount: number;
   currency: string;
+  receipt: string;
 }
 
 export async function createRazorpayOrder(
-  amountInRupees: number
-): Promise<RazorpayOrder> {
-  // Production: use Razorpay SDK
-  // const Razorpay = require('razorpay');
-  // const razorpay = new Razorpay({
-  //   key_id: process.env.RAZORPAY_KEY_ID!,
-  //   key_secret: process.env.RAZORPAY_KEY_SECRET!,
-  // });
-  // return await razorpay.orders.create({ amount: amountInRupees * 100, currency: 'INR' });
-
-  // Stub response
-  return {
-    id: `order_${Date.now()}`,
-    amount: amountInRupees * 100,
+  amountInRupees: number,
+  receipt: string
+): Promise<RazorpayOrderResult> {
+  const order = await razorpay.orders.create({
+    amount: Math.round(amountInRupees * 100), // paise
     currency: 'INR',
+    receipt,
+  });
+  return {
+    id: order.id,
+    amount: Number(order.amount),
+    currency: order.currency,
+    receipt: order.receipt ?? receipt,
   };
 }
 
-export function verifyPayment(
-  orderId: string,
-  paymentId: string,
+export function verifyPaymentSignature(
+  razorpayOrderId: string,
+  razorpayPaymentId: string,
   signature: string
 ): boolean {
-  // Production: verify HMAC-SHA256 signature
-  // const crypto = require('crypto');
-  // const body = orderId + '|' + paymentId;
-  // const expectedSignature = crypto
-  //   .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
-  //   .update(body).digest('hex');
-  // return expectedSignature === signature;
-
-  return true; // Stub
+  const body = `${razorpayOrderId}|${razorpayPaymentId}`;
+  const expectedSignature = crypto
+    .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'placeholder')
+    .update(body)
+    .digest('hex');
+  return expectedSignature === signature;
 }
 
-export const RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_placeholder';
+export const RAZORPAY_KEY_ID =
+  process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_placeholder';
+
+export default razorpay;

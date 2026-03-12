@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react';
 import { User, Package, MapPin, Heart, FileText, Star, ChevronRight, Gift, Award } from 'lucide-react';
-import { useUserStore, DEMO_USER } from '../../store/userStore';
+import { useUserStore } from '../../store/userStore';
 import { formatCurrency } from '../../lib/utils';
 import Header from '../components/header/Header';
 import Footer from '../components/footer/Footer';
@@ -25,7 +25,8 @@ export default function AccountPage() {
   const [showAddress, setShowAddress] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
 
-  const u = user ?? DEMO_USER;
+  const GUEST_USER = { name: 'Guest User', email: '', phone: '0000000000', paybackPoints: 0, membershipTier: 'none' as const };
+  const u = user ?? GUEST_USER;
 
   return (
     <div className="min-h-screen bg-[#F5F9FF]">
@@ -51,8 +52,8 @@ export default function AccountPage() {
                 </div>
               )}
               {!isLoggedIn && (
-                <button onClick={() => { setUser(DEMO_USER); }} className="mt-3 w-full bg-[#1E6FD9] text-white py-2 rounded-xl text-sm font-bold">
-                  Demo Login
+                <button onClick={() => setShowLogin(true)} className="mt-3 w-full bg-[#1E6FD9] text-white py-2 rounded-xl text-sm font-bold">
+                  Login / Sign Up
                 </button>
               )}
             </div>

@@ -110,8 +110,8 @@ export default function AddressModal({ isOpen, onClose }: AddressModalProps) {
                 </p>
                 <style>{`
                   @keyframes cyclist {
-                    from { left: -10%; }
-                    to { left: 95%; }
+                    from { left: 95%; }
+                    to { left: -10%; }
                   }
                 `}</style>
               </div>

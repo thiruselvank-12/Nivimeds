@@ -1,9 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { authApi } from '../lib/apiClient';
+import { cartApi } from '../lib/apiClient';
 
 export interface UserAddress {
-  id: string;
-  label: string; // Home, Work, Other
+  _id?: string;
+  id?: string;
+  label: string;
   name: string;
   phone: string;
   line1: string;
@@ -20,6 +23,7 @@ export interface User {
   phone: string;
   email?: string;
   avatar?: string;
+  role: 'user' | 'admin';
   paybackPoints: number;
   membershipTier: 'none' | 'basic' | 'plus';
   membershipExpiry?: string;
@@ -29,47 +33,49 @@ export interface User {
 interface UserStore {
   user: User | null;
   isLoggedIn: boolean;
+  isLoading: boolean;
   setUser: (user: User) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   addAddress: (address: UserAddress) => void;
   removeAddress: (id: string) => void;
   setDefaultAddress: (id: string) => void;
   addPaybackPoints: (points: number) => void;
 }
 
-const DEMO_USER: User = {
-  id: 'demo-001',
-  name: 'Ravi Kumar',
-  phone: '9876543210',
-  email: 'ravi@example.com',
-  paybackPoints: 320,
-  membershipTier: 'plus',
-  membershipExpiry: '2026-12-31',
-  addresses: [
-    {
-      id: 'addr-1',
-      label: 'Home',
-      name: 'Ravi Kumar',
-      phone: '9876543210',
-      line1: '42, Anna Nagar East',
-      line2: 'Near Metro Station',
-      city: 'Chennai',
-      state: 'Tamil Nadu',
-      pincode: '600102',
-      isDefault: true,
-    },
-  ],
-};
-
 export const useUserStore = create<UserStore>()(
   persist(
     (set, get) => ({
       user: null,
       isLoggedIn: false,
+      isLoading: false,
 
       setUser: (user) => set({ user, isLoggedIn: true }),
 
-      logout: () => set({ user: null, isLoggedIn: false }),
+      logout: async () => {
+        try {
+          await authApi.logout();
+        } catch {
+          // Ignore logout errors, always clear local state
+        }
+        set({ user: null, isLoggedIn: false });
+      },
+
+      refreshUser: async () => {
+        set({ isLoading: true });
+        try {
+          const { data } = await authApi.me();
+          if (data.user) {
+            set({ user: data.user, isLoggedIn: true });
+          } else {
+            set({ user: null, isLoggedIn: false });
+          }
+        } catch {
+          set({ user: null, isLoggedIn: false });
+        } finally {
+          set({ isLoading: false });
+        }
+      },
 
       addAddress: (address) =>
         set((state) => ({
@@ -83,7 +89,9 @@ export const useUserStore = create<UserStore>()(
           user: state.user
             ? {
                 ...state.user,
-                addresses: state.user.addresses.filter((a) => a.id !== id),
+                addresses: state.user.addresses.filter(
+                  (a) => (a._id || a.id) !== id
+                ),
               }
             : null,
         })),
@@ -95,7 +103,7 @@ export const useUserStore = create<UserStore>()(
                 ...state.user,
                 addresses: state.user.addresses.map((a) => ({
                   ...a,
-                  isDefault: a.id === id,
+                  isDefault: (a._id || a.id) === id,
                 })),
               }
             : null,
@@ -111,6 +119,3 @@ export const useUserStore = create<UserStore>()(
     { name: 'nivimeds-user' }
   )
 );
-
-// Export demo user for dev login convenience
-export { DEMO_USER };
